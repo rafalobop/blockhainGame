@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 
 import {ethers} from 'ethers'
-import Web3Modal from 'web3modal'
+import Web3Modal, { local } from 'web3modal'
 import { useNavigate } from 'react-router-dom'
 
 import {ABI, ADDRESS} from '../contract'
@@ -19,6 +19,17 @@ export const GlobalContextProvider = ({children}) => {
     const [ gameData, setGameData ] = useState({
         players: [], pendingBattles: [], activeBattle: null
     })
+
+    useEffect(() =>{
+        const battlegroundFromLocalStorage = localStorage.getItem('battleground')
+
+        if(battlegroundFromLocalStorage){
+            setBattleGround(battlegroundFromLocalStorage)
+        } else {
+            localStorage.setItem('battleground', battleGround)
+        }
+
+    }, [])
 
     const [updateGameData, setUpdateGameData] = useState(0)
     const [ battleGround, setBattleGround] = useState('bg-astral')
