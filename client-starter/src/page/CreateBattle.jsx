@@ -8,13 +8,14 @@ const CreateBattle = () => {
 
   const [ waitBattle, setWaitBattle] = useState(false)
 
-  const { contract, battleName, setBattleName, gameData } = useGlobalContext()
+  const { contract, battleName, setBattleName, gameData ,setErrorMessage } = useGlobalContext()
 
   const navigate = useNavigate()
 
   useEffect(() => {
-
-    if(gameData?.activeBattle?.battleStatus === 0){
+    if(gameData?.activeBattle?.battleStatus === 1){
+      navigate(`/battle/${gameData.activeBattle.name}`)
+    }else if(gameData?.activeBattle?.battleStatus === 0){
       setWaitBattle(true)
     }
 
@@ -25,12 +26,14 @@ const CreateBattle = () => {
     if(!battleName || !battleName.trim()) return null
 
     try {
-      await contract.createBattle(battleName)
+      await contract.createBattle(battleName,{
+        gasLimit: 200000
+      })
 
       setWaitBattle(false)
 
     } catch (error) {
-      console.log('eree', error)
+      setErrorMessage(error)
     }
   }
 

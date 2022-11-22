@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 
 import {ABI, ADDRESS} from '../contract'
 import { createEventListeners } from './createEventListener'
+import { GetParams } from '../utils/onboard'
 
 const GlobalContext = createContext()
 
@@ -16,9 +17,18 @@ export const GlobalContextProvider = ({children}) => {
     const [ contract, setContract ] = useState("")
     const [ showAlert, setShowAlert] = useState({status: 'false', type: 'info', message: ""})
     const [ battleName, setBattleName] = useState("")
+    const [updateGameData, setUpdateGameData] = useState(0)
+    const [ battleGround, setBattleGround] = useState('bg-astral')
+    const [ step, setStep] = useState(1)
+    const [ errorMessage, setErrorMessage ] = useState("")
+
+    const player1Ref = useRef()
+    const player2Ref = useRef()
+
     const [ gameData, setGameData ] = useState({
         players: [], pendingBattles: [], activeBattle: null
     })
+    const navigate = useNavigate()
 
     useEffect(() =>{
         const battlegroundFromLocalStorage = localStorage.getItem('battleground')
@@ -31,10 +41,19 @@ export const GlobalContextProvider = ({children}) => {
 
     }, [])
 
-    const [updateGameData, setUpdateGameData] = useState(0)
-    const [ battleGround, setBattleGround] = useState('bg-astral')
+    useEffect(()=>{
+        const resetParams = async () => {
+            const currentStep = await GetParams()
 
-    const navigate = useNavigate()
+            setStep(currentStep.step)
+        }
+        resetParams()
+
+        window?.ethereum?.on('chainChanged', () => resetParams())
+        window?.ethereum?.on('accountsChanged', () => resetParams())
+
+    },[])
+
 
     // Connect to wallet
     const updateCurrentWalletAddress = async () => {
@@ -42,7 +61,7 @@ export const GlobalContextProvider = ({children}) => {
             method: "eth_accounts"
         })
         if(accounts) setWalletAddress(accounts[0])
-        else console.log('no hay wallet')
+        else console.log('There is no wallet connected')
     }
 
     useEffect(() => {
@@ -67,14 +86,14 @@ export const GlobalContextProvider = ({children}) => {
     }, [])
 
     useEffect(() => {
-        if(contract){
+        if(step !== -1 && contract){
             createEventListeners({
                 navigate, contract, provider, 
                 walletAddress, setShowAlert,
-                setUpdateGameData,
+                setUpdateGameData, player1Ref, player2Ref
             })
         }
-    }, [])
+    }, [step])
 
     useEffect(()=>{
         if(showAlert?.status){
@@ -86,6 +105,20 @@ export const GlobalContextProvider = ({children}) => {
 
         }
     }, [showAlert])
+
+    useEffect(() => {
+        if(errorMessage){
+            const parsedErrorMessage = errorMessage?.reason?.slice('execution reverted: '.length).slice(0, -1)
+
+            if(parsedErrorMessage){
+                setShowAlert({
+                    status: true,
+                    type: 'failure',
+                    message: parsedErrorMessage
+                })
+            }
+        }
+    },[errorMessage])
     
     useEffect(()=>{
         const fetchGameData = async () => {
@@ -112,7 +145,10 @@ export const GlobalContextProvider = ({children}) => {
             contract, walletAddress,
             showAlert, setShowAlert,
             battleName, setBattleName,
-            gameData, battleGround, setBattleGround
+            gameData, battleGround, setBattleGround,
+            errorMessage, setErrorMessage,
+            player1Ref, player2Ref,
+            updateCurrentWalletAddress
         }}>
             {children}
         </GlobalContext.Provider>
